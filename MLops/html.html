@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Predicción de Temperatura y Lluvia</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        input, button {
+            padding: 10px;
+            margin: 5px;
+            font-size: 16px;
+        }
+        #result {
+            margin-top: 20px;
+        }
+        .error {
+            color: red;
+        }
+        textarea {
+            width: 100%;
+            height: 60px; /* Altura reducida */
+            font-family: monospace;
+            font-size: 12px; /* Tamaño de fuente reducido */
+        }
+        .example-text {
+            background-color: #f4f4f4;
+            padding: 5px; /* Menos relleno */
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-family: monospace;
+            font-size: 12px; /* Tamaño de fuente reducido */
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-width: 100%; /* Asegura que no se desborde */
+        }
+    </style>
+</head>
+<body>
+    <h1>Predicción de Temperatura y Lluvia</h1>
+    
+    <h2>Temperatura (Regresión)</h2>
+    <label for="temp_features">Introduce las características:</label>
+    <textarea id="temp_features" placeholder=""></textarea>
+    <p><strong>Ejemplo de entrada:</strong></p>
+    <div class="example-text">
+        [offset days, valor_previo, std, Lunes, Martes, Miércoles, Jueves, Viernes, Sábado, Enero, Febrero, Marzo, Abril, Mayo, Junio, Julio, Agosto, Septiembre, Octubre, Noviembre, media_7_dias, media_30_dias]
+        [4434, 16.234028, -1.518749, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16.126488, 16.048361]
+    </div>
+    <button onclick="predictTemperature()">Predecir Temperatura</button>
+
+    <h2>Lluvia (Clasificación)</h2>
+    <label for="rain_features">Introduce las características:</label>
+    <textarea id="rain_features" placeholder=""></textarea>
+    <p><strong>Ejemplo de entrada:</strong></p>
+    <div class="example-text">
+        [offset days, valor_previo, Lunes, Martes, Miércoles, Jueves, Viernes, Sábado, Enero, Febrero, Marzo, Abril, Mayo, Junio, Julio, Agosto, Septiembre, Octubre, Noviembre, lluvia_acumulada_semana, lluvia_acumulada_mes, lluvia_media_3d, lluvia_media_7d, lluvia_media_30d, lluvia_std_7d, lluvia_std_30d]
+        [3709, 8.1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16.2, 44.7, 3.833333, 2.314286, 1.490000, 2.948284, 1.800667]
+    </div>
+    <button onclick="predictRain()">Predecir Lluvia</button>
+
+    <div id="result"></div>
+
+    <script>
+        function validateFeatures(features) {
+            return features.every(f => !isNaN(f) && f !== '' && f !== null);
+        }
+
+        async function predictTemperature() {
+            const features = document.getElementById("temp_features").value
+                .replace(/\s+/g, '')  // Eliminar espacios extra
+                .replace('[', '')     // Eliminar el corchete de inicio
+                .replace(']', '')     // Eliminar el corchete de fin
+                .split(',')
+                .map(f => f.trim()); // Dividir la cadena en elementos
+
+            // Validar que todos los valores sean números
+            if (!validateFeatures(features)) {
+                document.getElementById("result").innerHTML = `<span class="error">Por favor, introduce valores numéricos válidos.</span>`;
+                return;
+            }
+
+            try {
+                const response = await fetch("http://127.0.0.1:8000/predict_regression", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ features: features.map(Number) }) // Convertir a número
+                });
+
+                const result = await response.json();
+                document.getElementById("result").innerHTML = `<h3>Resultado Temperatura:</h3> ${JSON.stringify(result)}`;
+            } catch (error) {
+                document.getElementById("result").innerHTML = `<span class="error">Hubo un error al hacer la petición: ${error.message}</span>`;
+            }
+        }
+
+        async function predictRain() {
+            const features = document.getElementById("rain_features").value
+                .replace(/\s+/g, '')  // Eliminar espacios extra
+                .replace('[', '')     // Eliminar el corchete de inicio
+                .replace(']', '')     // Eliminar el corchete de fin
+                .split(',')
+                .map(f => f.trim()); // Dividir la cadena en elementos
+
+            // Validar que todos los valores sean números
+            if (!validateFeatures(features)) {
+                document.getElementById("result").innerHTML = `<span class="error">Por favor, introduce valores numéricos válidos.</span>`;
+                return;
+            }
+
+            try {
+                const response = await fetch("http://127.0.0.1:8000/predict_classification", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ features: features.map(Number) }) // Convertir a número
+                });
+
+                const result = await response.json();
+                document.getElementById("result").innerHTML = `<h3>Resultado Lluvia:</h3> ${JSON.stringify(result)}`;
+            } catch (error) {
+                document.getElementById("result").innerHTML = `<span class="error">Hubo un error al hacer la petición: ${error.message}</span>`;
+            }
+        }
+    </script>
+</body>
+</html>
